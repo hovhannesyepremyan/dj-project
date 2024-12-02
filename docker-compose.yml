@@ -1,0 +1,54 @@
+version: "3"
+
+services:
+  project_img:
+    build: .
+    image: dj-project:latest
+
+  db:
+    image: postgres:15
+    volumes:
+      - db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+
+  redis:
+    image: redis:6
+    volumes:
+      - redis:/data
+
+  celery:
+    image: dj-project:latest
+    volumes:
+      - .:/project
+    depends_on:
+      - db
+      - redis
+    command: ./wait-for-it.sh db:5432 -- watchmedo auto-restart --directory=./ --pattern=*.py --recursive -- celery -A project worker -l info
+    environment:
+      C_FORCE_ROOT: "1"
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+    - "1025:1025"
+    - "8025:8025"
+
+  project:
+    image: dj-project:latest
+    volumes:
+      - .:/project
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+      - celery
+      - mailhog
+    command: ./wait-for-it.sh db:5432 -- python manage.py runserver 0:8000
+    ports:
+      - "8000:8000"
+
+volumes:
+  db:
+  redis:

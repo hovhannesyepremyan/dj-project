@@ -1,0 +1,4 @@
+-r requirements-test.txt
+
+django-debug-toolbar==3.2.4
+watchdog==2.1.6
